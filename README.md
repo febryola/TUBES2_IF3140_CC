@@ -3,7 +3,10 @@
 > _Repository ini ditujukan untuk memenuhi Tugas Besar 2 IF3140_
 
 ## Deskripsi
-   Program ini bertujuan untuk membuat simulasi pengiriman data antara server dan client melalui jaringan dengan menggunakan protokol transport layer. Program dibuat dengan bahasa pemrograman Python 3 dan library bawaannya. Program dijalankan di lingkungan sistem operasi berbasis Linux dengan server dan client dibuat secara terpisah dan dijalankan secara terpisah. Server dan client akan saling mengirim dan menerima berkas file yang merupakan data binary.
+Dalam tugas besar Manajemen Basis Data kali ini, kami mengimplementasikan protokol concurrency control dalam bentuk simulasi terhadap kumpulan proses dalam suatu schedule. Berikut ini adalah daftar Concurrency Control Protocol yang kami implementasikan pada tugas besar ini, yaitu:
+1. Simple Locking (Exclusive Only)
+2. Serial Optimistic Concurrency Control (Validation Based Protocol)
+3. Multiversion Timestamp Ordering Concurrency Control (MVCC)
 
 ## Requirements
 Untuk menjalankan program pastikan Anda telah mendownload dan menginstall hal-hal berikut:
