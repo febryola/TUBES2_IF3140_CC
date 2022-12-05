@@ -16,7 +16,6 @@ def main():
         print(Style.RESET_ALL)
         print("1. Simple Locking")
         print("2. Serial Optimistic Concurrency Control (OCC)")
-        print("3. Multiversion Concurrency Control (MVCC)")
         print(Fore.BLUE+"")
         input_metode = int(input("Nomor Metode yang ingin digunakan: "))
         print(Style.RESET_ALL)
@@ -30,9 +29,7 @@ def main():
     elif input_metode == 2:
         print(Fore.CYAN+"Anda memilih metode Serial Optimistic Concurrency Control (OCC)\n"+Fore.RESET)
         pilihMetodeInputOCC()
-    elif input_metode == 3:
-        print(Fore.CYAN+"Anda memilih metode Multiversion Concurrency Control (MVCC)\n"+Fore.RESET)
-
+    
 def banner():
     print(Fore.BLUE+"\n\n----------------------------------------------------------------")
     print(Fore.GREEN+"-----------------------Program Selesai--------------------------")

@@ -6,7 +6,6 @@
 Dalam tugas besar Manajemen Basis Data kali ini, kami mengimplementasikan protokol concurrency control dalam bentuk simulasi terhadap kumpulan proses dalam suatu schedule. Berikut ini adalah daftar Concurrency Control Protocol yang kami implementasikan pada tugas besar ini, yaitu:
 1. Simple Locking (Exclusive Only)
 2. Serial Optimistic Concurrency Control (Validation Based Protocol)
-3. Multiversion Timestamp Ordering Concurrency Control (MVCC)
 
 ## Requirements
 Untuk menjalankan program pastikan Anda telah mendownload dan menginstall hal-hal berikut:
@@ -25,9 +24,8 @@ Untuk menjalankan program pastikan Anda telah mendownload dan menginstall hal-ha
 $ python main.py
 ```
 5. Inputkan algoritma protokol Concurrency Control yang diinginkan, ketik 1 jika ingin menggunakan simple locking algorithm, ketik 2 jika menggunakan optimistic concurrency control (OCC), dan ketik 3 jika menggunakan multiversion concurrency control algorithm
-6. Jika memilih Simple Locking Algorithm,
-7. Jika memilih Serial Optimistic Concurrency Control (OCC),
-8. Jika memilih Multiversion Concurrency Control (MVCC),
+6. Jika memilih Simple Locking Algorithm, pilih apakah ingin menggunakan wound-wait scheme atau tidak dan tentukan juga proses input yang diinginkan, apakah menggunakan console atau file
+7. Jika memilih Serial Optimistic Concurrency Control (OCC), tentukan juga proses input yang diinginkan, apakah menggunakan console atau file
 
 ## Contributor
 <table>
