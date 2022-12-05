@@ -7,7 +7,9 @@ class Transaction:
     def __init__(self, id):
         self.id = id
         self.listTransaction = []
+        self.listAllTransaction = []
         self.waitTransactionExlusiveLockFrom = ""
+        self.indexwaitTransactionExlusiveLockFrom = ""
 
 class ExlusivceClock:
     def __init__(self, data):
@@ -17,8 +19,6 @@ class ExlusivceClock:
 def validasiTransaksi(transaction) -> bool:
     if ( ( len(transaction.listTransaction) == 1 ) and ( transaction.listTransaction[0][0] == "C" ) )  :
         return True
-    else :
-        return False
 
 def getIndexListExlusiveLock(data, listExlusiveLock):
     for i in range (len(listExlusiveLock)) :
@@ -28,8 +28,8 @@ def getIndexListExlusiveLock(data, listExlusiveLock):
 def exclusiveLockRelease(idTransaction, listExclusiveLock, listUrutanSchedule) :
     for i in range (len(listExclusiveLock)) :
         if (listExclusiveLock[i].whoTransactionGetExlusiveLock == idTransaction) :
-            listUrutanSchedule.append("UL(" + listExclusiveLock[i].data + ")")
-            print("==> Exclusive Lock " + listExclusiveLock[i].data + " release")
+            listUrutanSchedule.append("UL" + idTransaction + "("  + listExclusiveLock[i].data + ")")
+            print("==> Exclusive Lock " + listExclusiveLock[i].data + " on transaction " + idTransaction + " release")
             listExclusiveLock[i].whoTransactionGetExlusiveLock = ""
     return (listUrutanSchedule)
 
@@ -62,10 +62,11 @@ def eliminationTransactionDeadLock(listSchedule, listAbortTransaction):
     del tempListSchedule
     return(listSchedule)
 
-def checkExlusiveLock(listExclusiveLock, indexExlusiveLock, listTransaksi, id, idStr, listSchedule, queueOperasi, data, listQueueData, listQueueTransaction, listUrutanSchedule, isUseWoundWaitScheme, listUrutanTransaksi, listAbortTransaction) :
-    if listExclusiveLock[indexExlusiveLock].whoTransactionGetExlusiveLock == "" and listTransaksi[id].listTransaction[0] ==  listSchedule[0] :
-        if ( listTransaksi[id].waitTransactionExlusiveLockFrom != "") :
+def checkExlusiveLock(listExclusiveLock, indexExlusiveLock, listTransaksi, id, idStr, listSchedule, queueOperasi, data, listQueueData, listQueueTransaction, listUrutanSchedule, isUseWoundWaitSchema, listUrutanTransaksi, listAbortTransaction, listOfListAbortTransaction) :
+    if listExclusiveLock[indexExlusiveLock].whoTransactionGetExlusiveLock == "" and listTransaksi[id].listTransaction[0] == listSchedule[0] :
+        if ( listTransaksi[id].waitTransactionExlusiveLockFrom != "" ) :
             listTransaksi[id].waitTransactionExlusiveLockFrom = ""
+            listTransaksi[id].indexwaitTransactionExlusiveLockFrom = ""
         listExclusiveLock[indexExlusiveLock].whoTransactionGetExlusiveLock = idStr
         print("==> Give Exclusive Lock " + data + " to T" + idStr)
         listUrutanSchedule.append("XL" + idStr + "(" + data + ")")
@@ -73,31 +74,69 @@ def checkExlusiveLock(listExclusiveLock, indexExlusiveLock, listTransaksi, id, i
         del listSchedule[0]
         del listTransaksi[id].listTransaction[0]
         print("==> Success")
-    elif listExclusiveLock[indexExlusiveLock].whoTransactionGetExlusiveLock == idStr and listTransaksi[id].listTransaction[0] ==  listSchedule[0] :
+    elif listExclusiveLock[indexExlusiveLock].whoTransactionGetExlusiveLock == idStr and listTransaksi[id].listTransaction[0] == listSchedule[0] :
         if ( listTransaksi[id].waitTransactionExlusiveLockFrom != "") :
             listTransaksi[id].waitTransactionExlusiveLockFrom = ""
+            listTransaksi[id].indexwaitTransactionExlusiveLockFrom = ""
         listUrutanSchedule.append(listSchedule[0])
         del listSchedule[0]
         del listTransaksi[id].listTransaction[0]
         print("==> Success")
     else :
+        if ( listTransaksi[id].waitTransactionExlusiveLockFrom == "") :
+            listTransaksi[id].waitTransactionExlusiveLockFrom = data
+            listTransaksi[id].indexwaitTransactionExlusiveLockFrom = listExclusiveLock[indexExlusiveLock].whoTransactionGetExlusiveLock
+        print("==> Transaction " + idStr + " is waiting for Exclusive Lock " + listTransaksi[id].waitTransactionExlusiveLockFrom + " which is in Transaction "+ listTransaksi[id].indexwaitTransactionExlusiveLockFrom + ". " + listSchedule[0] + " get into the queue...")
+        queueOperasi.append(listSchedule[0])
+        if ( data not in listQueueData ) :
+            listQueueData.append(data)
+        if ( idStr not in listQueueTransaction) :
+            listQueueTransaction.append(idStr)
+        del listSchedule[0]
 
-        if (isUseWoundWaitScheme == True) :
-            print("Do Wound-Wait Scheme")
+        # Cek apakah transaksi tua meminta lock kepada transaksi yang muda dari nya
+        isOldAskYoung = False
+        susOld = idStr
+        urutanSusOld = 0
+        susYoung = ""
+        urutanSusYoung = 0
+        for i in range (len(listExclusiveLock)) :
+            if (listExclusiveLock[i].data == listTransaksi[id].waitTransactionExlusiveLockFrom) :
+                susYoung = listExclusiveLock[i].whoTransactionGetExlusiveLock
+        
+        for i in range (len(listUrutanTransaksi)) :
+            if (str(listUrutanTransaksi[i]) == susOld):
+                urutanSusOld = i
+            if (str(listUrutanTransaksi[i]) == susYoung):
+                urutanSusYoung = i
+        
+        if (urutanSusOld < urutanSusYoung) :
+            isOldAskYoung = True
+        else :
+            isOldAskYoung = False
+        
+        if (isUseWoundWaitSchema == True and isOldAskYoung == True ) :
+            if ( len(listAbortTransaction) != 0 ) :
+                listOfListAbortTransaction.append(listAbortTransaction)
+                del listAbortTransaction
+                listAbortTransaction = []
+
+            print("!!!Do Wound-Wait Scheme!!!")
             print("Aborting T", end="")
-            idTransactionPrevent = listUrutanTransaksi[len(listUrutanTransaksi) - 1]
+            idTransactionPrevent = int(susYoung)
             id = idTransactionPrevent - 1
-            print(str(idTransactionPrevent))
+            listUrutanSchedule.append("A" + str(idTransactionPrevent))
 
             #Transaksi yang di-abort masuk ke dalam listAbortTransaction
-            for j in range (len(listTransaksi[id].listTransaction)):
-                listAbortTransaction.append(listTransaksi[id].listTransaction[j])
+            for j in range (len(listTransaksi[id].listAllTransaction)):
+                listAbortTransaction.append(listTransaksi[id].listAllTransaction[j])
 
             # Fase pembebasan exclusive lock yang ada pada transaki tersebut
             for j in range ( len(listExclusiveLock) ):
-                listUrutanSchedule.append("UL(" + listExclusiveLock[j].data + ")")
-                print("==> Exclusive Lock " + listExclusiveLock[j].data + " release")
-                listExclusiveLock[j].whoTransactionGetExlusiveLock = ""
+                if (listExclusiveLock[j].whoTransactionGetExlusiveLock == str(idTransactionPrevent)) :
+                    listUrutanSchedule.append("UL" + str(idTransactionPrevent) + "(" + listExclusiveLock[j].data + ")")
+                    print("==> Exclusive Lock " + listExclusiveLock[j].data + " on transaction " + str(idTransactionPrevent) + " release")
+                    listExclusiveLock[j].whoTransactionGetExlusiveLock = ""
 
             # Fase eliminasi transaksi yang di-deadlock
             if ( len(queueOperasi) > 0 ) :
@@ -108,26 +147,18 @@ def checkExlusiveLock(listExclusiveLock, indexExlusiveLock, listTransaksi, id, i
             # Fase penghapusan list
             del listQueueData
             listQueueData = []
-        else :
-            if ( listTransaksi[id].waitTransactionExlusiveLockFrom == "") :
-                listTransaksi[id].waitTransactionExlusiveLockFrom = data
-            print("==> Transaction " + idStr + " waits for Exclusive Lock " + listTransaksi[id].waitTransactionExlusiveLockFrom + ". " + listSchedule[0] + " get into the queue...")
-            queueOperasi.append(listSchedule[0])
-            if ( data not in listQueueData ) :
-                listQueueData.append(data)
-            if ( idStr not in listQueueTransaction) :
-                listQueueTransaction.append(idStr)
-            del listSchedule[0]
+                
 
-    return(listExclusiveLock, listSchedule, listTransaksi, queueOperasi, listQueueData, listQueueTransaction, listUrutanSchedule, listUrutanTransaksi, listAbortTransaction)
+    return(listExclusiveLock, listSchedule, listTransaksi, queueOperasi, listQueueData, listQueueTransaction, listUrutanSchedule, listUrutanTransaksi, listAbortTransaction, listOfListAbortTransaction)
 
-def LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitScheme):
+def LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitSchema):
     print(Fore.BLUE+"-------------------------------------------------------"+Fore.RESET)
     print(Fore.RED +"---------------------Simple Locking--------------------"+Fore.RESET)
     print(Fore.BLUE+"-------------------------------------------------------"+Fore.RESET)
 
     # Fase Inisialisasi
     # Inisialisasi kamus
+    isDeadLock = False
     queueOperasi = []
     listExclusiveLock = []
     listData = []
@@ -137,6 +168,7 @@ def LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitScheme):
     listUrutanSchedule = []
     listQueueTransaction = []
     listAbortTransaction = []
+    listOfListAbortTransaction = []
 
     # Inisialisasi list transaksi
     for i in range (totalTransaksi):
@@ -144,6 +176,7 @@ def LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitScheme):
         listTransaksi.append(transaksi)
 
     # Inisialisasi list data yang akan ditransaksi
+    print("Berikut Urutan Transaksi")
     for i in range (len(listSchedule)) :
         idTransaksi = 0
 
@@ -164,6 +197,7 @@ def LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitScheme):
 
             if ((idTransaksi + 1) not in listUrutanTransaksi):
                 listUrutanTransaksi.append(idTransaksi + 1)
+                print("Transaksi", idTransaksi + 1)
         elif ( len(listSchedule[i]) == 6 ) :
             idTransaksi = (int( listSchedule[i][1] + listSchedule[i][2] )) - 1
 
@@ -174,9 +208,12 @@ def LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitScheme):
             
             if ((idTransaksi + 1) not in listUrutanTransaksi):
                 listUrutanTransaksi.append(idTransaksi + 1)
+                print("Transaksi", idTransaksi + 1)
 
         (listTransaksi[idTransaksi].listTransaction).append(listSchedule[i])
+        (listTransaksi[idTransaksi].listAllTransaction).append(listSchedule[i])
 
+    print()
     # Fase operasi
     while ( len(listSchedule) > 0 ):
         i = 0
@@ -249,7 +286,7 @@ def LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitScheme):
                 print(idStr)
                 
                 #Cek exclusive lock sedang dipegang transaksi apa dan apakah terdapat transaksi sebelum si transaksi tersebut 
-                listExclusiveLock, listSchedule, listTransaksi, queueOperasi, listQueueData, listQueueTransaction, listUrutanSchedule, listUrutanTransaksi, listAbortTransaction = checkExlusiveLock(listExclusiveLock, indexExlusiveLock, listTransaksi, id, idStr, listSchedule, queueOperasi, data, listQueueData, listQueueTransaction, listUrutanSchedule, isUseWoundWaitScheme, listUrutanTransaksi, listAbortTransaction)
+                listExclusiveLock, listSchedule, listTransaksi, queueOperasi, listQueueData, listQueueTransaction, listUrutanSchedule, listUrutanTransaksi, listAbortTransaction, listOfListAbortTransaction = checkExlusiveLock(listExclusiveLock, indexExlusiveLock, listTransaksi, id, idStr, listSchedule, queueOperasi, data, listQueueData, listQueueTransaction, listUrutanSchedule, isUseWoundWaitSchema, listUrutanTransaksi, listAbortTransaction, listOfListAbortTransaction)
 
             elif(len(listSchedule[i]) == 6):
                 id = (int( listSchedule[i][1] + listSchedule[i][2] )) - 1
@@ -266,24 +303,57 @@ def LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitScheme):
                 print(idStr)
                     
                 #Cek exclusive lock sedang dipegang transaksi apa dan apakah terdapat transaksi sebelum si transaksi tersebut 
-                listExclusiveLock, listSchedule, listTransaksi, queueOperasi, listQueueData, listQueueTransaction, listUrutanSchedule, listUrutanTransaksi, listAbortTransaction = checkExlusiveLock(listExclusiveLock, indexExlusiveLock, listTransaksi, id, idStr, listSchedule, queueOperasi, data, listQueueData, listQueueTransaction, listUrutanSchedule, isUseWoundWaitScheme, listUrutanTransaksi, listAbortTransaction)
+                listExclusiveLock, listSchedule, listTransaksi, queueOperasi, listQueueData, listQueueTransaction, listUrutanSchedule, listUrutanTransaksi, listAbortTransaction, listOfListAbortTransaction = checkExlusiveLock(listExclusiveLock, indexExlusiveLock, listTransaksi, id, idStr, listSchedule, queueOperasi, data, listQueueData, listQueueTransaction, listUrutanSchedule, isUseWoundWaitSchema, listUrutanTransaksi, listAbortTransaction, listOfListAbortTransaction)
 
         #Cek jika ternyata terjadi proses saling menunggu yang menyebabkan deadlock
-        if ( len(listData) == len(listQueueData) and len(listUrutanTransaksi) == len(listQueueTransaction) and len(listQueueData) > 1 and len(listQueueTransaction) > 1 and len(listSchedule) != 0 ) :
-            print("Deadlock deteced.")
+        if ( len(listData) == len(listQueueData) and len(listUrutanTransaksi) == len(listQueueTransaction) and len(listQueueData) > 1 and len(listQueueTransaction) > 1 and len(listSchedule) != 0 and isUseWoundWaitSchema == False) :
+            print("!!!Deadlock detected!!!")
             del listSchedule
+            listSchedule = []
+            isDeadLock = True
             break
-
 
         #Fase menjalankan transaksi yang telah diabort
         if ( len(listSchedule) == 0 and len(listAbortTransaction) != 0 ) :
-            print("Executing aborted transactions...")
-            for j in range (len(listAbortTransaction)) :
-                listSchedule.append(listAbortTransaction[j]) 
-            del listAbortTransaction
-            listAbortTransaction = []
+            print("!!!Executing aborted transactions!!!")
+            listOfListAbortTransaction.append(listAbortTransaction)
+            if (len(listOfListAbortTransaction) > 0) :
+                for i in range (len(listOfListAbortTransaction)) :
+                    del listAbortTransaction
+                    listAbortTransaction = []
+                    for j in range (len(listOfListAbortTransaction[i])):
+                        listAbortTransaction.append((listOfListAbortTransaction[i])[j])
+                    #Cari id transaksi yang di abort
+                    id = 0
+                    if ( len(listAbortTransaction[0]) == 5 or len(listAbortTransaction[0]) == 2):
+                        id = int(listAbortTransaction[0][1]) - 1
+                    elif ( len(listAbortTransaction[0]) == 6 or len(listAbortTransaction[0]) == 3):
+                        id = int(listAbortTransaction[0][1] + listAbortTransaction[0][2]) - 1
+                    del listTransaksi[id].listTransaction
+                    listTransaksi[id].listTransaction = []
+                    for i in range (len(listTransaksi[id].listAllTransaction)) :
+                        (listTransaksi[id].listTransaction).append(listTransaksi[id].listAllTransaction[i])                
+                    for j in range (len(listAbortTransaction)) :
+                        listSchedule.append(listAbortTransaction[j])
+                    del listAbortTransaction
+                    listAbortTransaction = []
+            else :
+                #Cari id transaksi yang di abort
+                id = 0
+                if ( len(listAbortTransaction[0]) == 5 or len(listAbortTransaction[0]) == 2):
+                    id = int(listAbortTransaction[0][1]) - 1
+                elif ( len(listAbortTransaction[0]) == 6 or len(listAbortTransaction[0]) == 3):
+                    id = int(listAbortTransaction[0][1] + listAbortTransaction[0][2]) - 1
+                del listTransaksi[id].listTransaction
+                listTransaksi[id].listTransaction = []
+                for i in range (len(listTransaksi[id].listAllTransaction)) :
+                    (listTransaksi[id].listTransaction).append(listTransaksi[id].listAllTransaction[i])                
+                for j in range (len(listAbortTransaction)) :
+                    listSchedule.append(listAbortTransaction[j])
+                del listAbortTransaction
+                listAbortTransaction = []
 
-    if (len(listSchedule) == 0 and len(queueOperasi) == 0) :
+    if (len(listSchedule) == 0 and len(queueOperasi) == 0 and isDeadLock == False) :
         print("\nBerikut Urutan Schedule")
         for i in range (len(listUrutanSchedule)) :
             print(listUrutanSchedule[i], end="")
@@ -328,7 +398,7 @@ def formatting(listSchedule):
 
     return True
 
-def executeLock(isUseWoundWaitScheme):
+def executeLock(isUseWoundWaitSchema):
     print(Fore.BLUE+"-------------------------------------------------------"+Fore.RESET)
     print(Fore.RED +"----------------Starting Simple Locking----------------"+Fore.RESET)
     print(Fore.BLUE+"-------------------------------------------------------"+Fore.RESET)
@@ -349,14 +419,14 @@ def executeLock(isUseWoundWaitScheme):
     if not(formatting(listSchedule)):
         print(Fore.RED+"Format yang Anda Masukkan Salah!!!"+Fore.RESET)
 
-    if (LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitScheme)):
+    if (LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitSchema)):
         print(Fore.BLUE+"Validasi Transaksi Sukses Dilakukan"+Fore.RESET)
     else :
         print(Fore.RED+"Validasi Transaksi Gagal Dilakukan"+Fore.RESET)
 
 def pilihMetodeInputLock():
 
-    isUseWoundWaitScheme = False
+    isUseWoundWaitSchema = False
     inputMetode = 0
     while (inputMetode < 1 or inputMetode > 2):
         print(Fore.BLUE+"Apakah menggunakan Wound-Wait Scheme? : "+Fore.RESET)
@@ -369,9 +439,9 @@ def pilihMetodeInputLock():
             print("Input salah! Silahkan masukkan nomor metode yang ingin digunakan!"+Fore.RESET)
 
     if (inputMetode == 1):
-        isUseWoundWaitScheme = True
+        isUseWoundWaitSchema = True
     elif (inputMetode == 2):
-        isUseWoundWaitScheme = False
+        isUseWoundWaitSchema = False
 
     inputMetode = 0
     while (inputMetode < 1 or inputMetode > 2):
@@ -385,7 +455,7 @@ def pilihMetodeInputLock():
             print("Input salah! Silahkan masukkan nomor metode yang ingin digunakan!"+Fore.RESET)
 
     if (inputMetode == 1):
-        executeLock(isUseWoundWaitScheme)
+        executeLock(isUseWoundWaitSchema)
     elif (inputMetode == 2):
         print("Masukkan nama file (Pastikan file sudah ada di folder test) : ", end="")
         filename = str(input())
@@ -403,7 +473,7 @@ def pilihMetodeInputLock():
             print("Schedule", (i+1),": ",x)
             listSchedule.append(x)
 
-        if (LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitScheme)):
+        if (LockTransaction(listSchedule, totalTransaksi, isUseWoundWaitSchema)):
             print(Fore.BLUE+"Validasi Transaksi Sukses Dilakukan"+Fore.RESET)   
         else :
             print(Fore.RED+"Validasi Transaksi Gagal Dilakukan"+Fore.RESET)
