@@ -3,6 +3,8 @@ from colorama import init #Library untuk memberikan warna pada program
 init()
 from colorama import Fore, Back, Style
 from OCC import *
+from Lock import *
+
 def main():
     print(Fore.BLUE+"----------------------------------------------------------------")
     print(Fore.GREEN+"Selamat datang pada simulasi Concurrency Control Kelompok 7 K02!")
@@ -24,6 +26,7 @@ def main():
 
     if input_metode == 1:
         print(Fore.CYAN+"Anda memilih metode Simple Locking\n"+Fore.RESET)
+        pilihMetodeInputLock()
     elif input_metode == 2:
         print(Fore.CYAN+"Anda memilih metode Serial Optimistic Concurrency Control (OCC)\n"+Fore.RESET)
         pilihMetodeInputOCC()
